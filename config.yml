@@ -1,0 +1,4 @@
+localserver_ip: "127.0.0.1"
+localserver_port: 3312
+user_login: "operator"
+user_password: "1234"
