@@ -9,6 +9,7 @@ import socket
 import yaml
 import face_recognition
 from os import walk
+import requests
 
 app = FastAPI()
 
@@ -47,16 +48,40 @@ def add(name: str, file: UploadFile = File(...)):
         f.write(content)
     file.file.close()
 
-@app.post("/access")
-def access(file: UploadFile = File(...)):
-    known_images = next(walk("known_images"), (None, None, []))[2]
-    print(known_images)
+@app.post("/predict")
+def predict(file: UploadFile = File(...)):
 
     print(file.filename)
     content = file.file.read()
     with open(file.filename, "wb") as f:
         f.write(content)
     file.file.close()
+
+    # files = {'media': open(file.file, 'rb')}
+
+    # response = requests.post("http://192.168.88.207:9090/face_analytics/predict",   data={
+    #   'filename': file.file ,
+    #   "msg":"hello" ,
+    #   "type" : "multipart/form-data"
+    # }, files={"file": file.file})
+    data = {'name': (None, file.filename), 'description': (None, 'упс'), 'image': open(file.filename, 'rb')}
+    response = requests.post("http://192.168.88.207:9090/face_analytics/predict", files=data)
+    print(response.json()['confidence_bbox'])
+
+    if(response.json()['confidence_bbox'] >= 0.8):
+        message = f"LOGIN 1.8 {login} {password}\r\nALLOWPASS 1 1 UNKNOWN\r\n"
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((ip, port))
+        s.send(message.encode('utf-8'))
+        s.close()
+        return "success"
+
+
+
+@app.post("/access")
+def access(file: UploadFile = File(...)):
+    known_images = next(walk("known_images"), (None, None, []))[2]
+    print(known_images)
 
     unknown_image = face_recognition.load_image_file("face.jpg")
     unknown_encoding = face_recognition.face_encodings(unknown_image)
